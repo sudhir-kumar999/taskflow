@@ -10,6 +10,7 @@ router.get("/data",async(req,res)=>{
             email:"sk@gmail.com"
         }
     })
+    console.log(userData)
     return res.status(200).json({
         success:true,
         message:"data fetched successfully",
