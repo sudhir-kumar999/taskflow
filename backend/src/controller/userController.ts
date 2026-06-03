@@ -90,9 +90,11 @@ export const registerUser = async (req: RequestWithUserRole, res: Response) => {
       createdAt: new Date(Date.now()),
       expAt: new Date(Date.now() + 20 * 60 * 1000),
     };
+    const email_link=process.env.EMAIL_LINK
+    console.log(email_link)
     const template = `Hello, ${findId?.name} Please verify your email by
                 clicking this link :
-                <a href="http://localhost:5000/api/users/verify-email/${findId?.id}/${tokenData.tokens}">Click here to verify </a>`;
+                <a href="${email_link}/api/users/verify-email/${findId?.id}/${tokenData.tokens}">Click here to verify </a>`;
 
     const mailInfo = await sendMail(email, template);
     if (!mailInfo?.accepted[0]) {
@@ -174,12 +176,12 @@ export const verifyEmail = async (req: Request, res: Response) => {
   await tokenRepo.save(tokenUser);
   checkUser.isVerified = true;
   await userRepo.save(checkUser);
-  let checkUsedToken=await tokenRepo.findOne({
-    where:{
+  let checkUsedToken = await tokenRepo.findOne({
+    where: {
       id: Array.isArray(reqId) ? In(reqId) : reqId,
-    }
-  })
-  if(checkUsedToken?.is_used){
-    await tokenRepo.remove(checkUsedToken)
+    },
+  });
+  if (checkUsedToken?.is_used) {
+    await tokenRepo.remove(checkUsedToken);
   }
 };
