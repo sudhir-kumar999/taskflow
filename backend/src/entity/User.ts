@@ -7,6 +7,7 @@ import {
 } from "typeorm";
 
 import { Task } from "./Tasks";
+import { Token } from "./Token";
 
 @Entity("users")
 export class User {
@@ -32,6 +33,9 @@ export class User {
 
   @OneToMany(() => Task, (task) => task.user)
   tasks!: Task[];
+
+  @OneToMany(() => Token, (toke) => toke.tokens)
+  tokens!: Token[];
 
 
 }

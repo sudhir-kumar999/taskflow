@@ -6,10 +6,9 @@ import dotenv from "dotenv";
 dotenv.config()
 const app=express()
 app.use(express.json())
-// app.use("/",(req:Request,res:Response)=>{
-//     res.send("hello from node")
-// })
+
 app.use("/user",router)
+app.use("/api/users",router)
 
 
 const PORT=process.env.PORT
