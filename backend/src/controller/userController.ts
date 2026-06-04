@@ -10,6 +10,7 @@ import {
   generateAccessToken,
   generateRefreshToken,
 } from "../../utils/generateTokens";
+import { sendGrid } from "../../utils/sendGrid";
 interface decode {
   name: string;
   email: string;
@@ -63,7 +64,7 @@ export const registerUser = async (req: RequestWithUserRole, res: Response) => {
     if (!name) {
       return res.status(400).json({
         success: false,
-        message: "name is required it acnnot be empty",
+        message: "name is required it cannot be empty",
       });
     }
     const strPassword = password.toString();
@@ -100,15 +101,22 @@ export const registerUser = async (req: RequestWithUserRole, res: Response) => {
                 clicking this link :
                 <a href="${email_link}/api/users/verify-email/${findId?.id}/${tokenData.tokens}">Click here to verify </a>`;
 
-    const mailInfo = await sendMail(email, template);
-    if (!mailInfo?.accepted[0]) {
-      return res.status(502).json({
-        success: false,
-        message: "Failed when send Email",
-      });
-    }
+    // const mailInfo = await sendMail(email, template);
+    // if (!mailInfo?.accepted[0]) {
+    //   return res.status(502).json({
+    //     success: false,
+    //     message: "Failed when send Email",
+    //   });
+    // }
+    const sendMail=await sendGrid(email,template)
     let res3 = await tokenRepo.save(tokenData);
-    console.log(res3);
+    console.log("sendgrid",sendMail);
+    // if (sendMail==undefined) {
+    //   return res.status(502).json({
+    //     success: false,
+    //     message: "Failed when send Email",
+    //   });
+    // }
 
     return res.status(201).json({
       success: true,
@@ -125,7 +133,8 @@ export const registerUser = async (req: RequestWithUserRole, res: Response) => {
 };
 
 export const verifyEmail = async (req: Request, res: Response) => {
-  const token = req.params.token as string;
+  try {
+    const token = req.params.token as string;
   const reqId = req.params.id as string;
   console.log(reqId);
   console.log(token);
@@ -199,24 +208,24 @@ export const verifyEmail = async (req: Request, res: Response) => {
   await tokenRepo.save(tokenUser);
   checkUser.isVerified = true;
   await userRepo.save(checkUser);
-  // let checkUsedToken = await tokenRepo.findOne({
-  //   where: {
-  //     id: Array.isArray(reqId) ? In(reqId) : reqId,
-  //   },
-  // });
-  // if (checkUsedToken?.is_used) {
-  //   await tokenRepo.remove(checkUsedToken);
-  // }
   await tokenRepo.delete(tokenUser.id);
-
   return res.status(200).json({
     success: true,
     message: "email verified verified success",
   });
+  } catch (error) {
+    if (error instanceof Error) {
+      res.status(500).json({
+        success: false,
+        message: error.message || "internal server error",
+      });
+    }
+  }
 };
 
 export const resendLink = async (req: Request, res: Response) => {
-  const { email } = req.body;
+  try {
+    const { email } = req.body;
   console.log(email);
   let checkUser = await userRepo.findOne({
     where: {
@@ -267,8 +276,8 @@ export const resendLink = async (req: Request, res: Response) => {
   const email_link = process.env.EMAIL_LINK;
   console.log(email_link);
   const template = `Hello, ${checkUser?.name} Please verify your email by
-                clicking this link :
-                <a href="${email_link}/api/users/verify-email/${checkUser?.id}/${tokenData.tokens}">Click here to verify </a>`;
+                    clicking this link :
+                    <a href="${email_link}/api/users/verify-email/${checkUser?.id}/${tokenData.tokens}">Click here to verify </a>`;
 
   const mailInfo = await sendMail(email, template);
   if (!mailInfo?.accepted[0]) {
@@ -284,89 +293,126 @@ export const resendLink = async (req: Request, res: Response) => {
     success: true,
     message: "Token send on your email verify to login",
   });
+  } catch (error) {
+    if (error instanceof Error) {
+      res.status(500).json({
+        success: false,
+        message: error.message || "internal server error",
+      });
+    }
+  }
 };
 
 export const loginUser = async (req: Request, res: Response) => {
-  let { email, password } = req.body;
-  console.log(email, password);
-  if (email == undefined || password == undefined) {
-    return res.status(401).json({
-      success: false,
-      message: "email and password is required for login",
+  try {
+    let { email, password } = req.body;
+    console.log(email, password);
+    if (email == undefined || password == undefined) {
+      return res.status(401).json({
+        success: false,
+        message: "email and password is required for login",
+      });
+    }
+    email = email.trim().toLowerCase();
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: "email is not valid enter valid email",
+      });
+    }
+    let userExist = await userRepo.findOne({
+      where: {
+        email,
+      },
     });
-  }
-  email = email.trim().toLowerCase();
-  if (!emailRegex.test(email)) {
-    return res.status(400).json({
-      success: false,
-      message: "email is not valid enter valid email",
+    if (!userExist) {
+      return res.json({
+        success: false,
+        message: "user not register sign up first",
+      });
+    }
+
+    if (!userExist.isVerified) {
+      return res.status(401).json({
+        success: false,
+        message: "you are not verified. verify your email first",
+      });
+    }
+
+    const verifyPass = await bcrypt.compare(password, userExist.password);
+    if (!verifyPass) {
+      return res.json({
+        success: false,
+        message: "wrong password entered",
+      });
+    }
+
+    const payload = {
+      name: userExist.name,
+      email: userExist.email,
+      id: userExist.id,
+    };
+
+    const accessToken = generateAccessToken(
+      payload,
+      process.env.ACCESS_KEY as string,
+    );
+
+    const refreshPayload = {
+      id: userExist.id,
+    };
+
+    const refreshToken = generateRefreshToken(
+      refreshPayload,
+      process.env.REFRESH_KEY as string,
+    );
+
+    const production = process.env.NODE_ENv === "production";
+
+    res.cookie("accessToken", accessToken, {
+      httpOnly: true,
+      secure: production,
+      sameSite: production ? "strict" : "lax",
     });
-  }
-  let userExist = await userRepo.findOne({
-    where: {
-      email,
-    },
-  });
-  if (!userExist) {
-    return res.json({
-      success: false,
-      message: "user not register sign up first",
+
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: production,
+      sameSite: production ? "strict" : "lax",
     });
-  }
 
-  if (!userExist.isVerified) {
-    return res.status(401).json({
-      success: false,
-      message: "you are not verified. verify your email first",
+    return res.status(200).json({
+      success: true,
+      message: "login successfully",
     });
+  } catch (error) {
+    if (error instanceof Error) {
+      res.status(500).json({
+        success: false,
+        message: error.message || "internal server error",
+      });
+    }
   }
+};
 
-  const verifyPass = await bcrypt.compare(password, userExist.password);
-  if (!verifyPass) {
-    return res.json({
-      success: false,
-      message: "wrong password entered",
+export const logoutUser = (req: Request, res: Response) => {
+  try {
+    res.clearCookie("accessToken", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
     });
+
+    return res.status(200).json({
+      success: true,
+      message: "Logout successfully",
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      res.status(500).json({
+        success: false,
+        message: error.message || "internal server error",
+      });
+    }
   }
-
-  const payload = {
-    name: userExist.name,
-    email: userExist.email,
-    id: userExist.id,
-  };
-
-  const accessToken = generateAccessToken(
-    payload,
-    process.env.ACCESS_KEY as string,
-  );
-
-  const refreshPayload = {
-    id: userExist.id,
-  };
-
-  const refreshToken = generateRefreshToken(
-    refreshPayload,
-    process.env.REFRESH_KEY as string,
-  );
-
-  const production = process.env.NODE_ENv === "production";
-
-  res.cookie("accessToken", accessToken, {
-    httpOnly: true,
-    secure: production,
-    sameSite: production ? "strict" : "lax",
-    // maxAge: 1800000,
-  });
-
-  res.cookie("refreshToken", refreshToken, {
-    httpOnly: true,
-    secure: production,
-    sameSite: production ? "strict" : "lax",
-    // maxAge: 3600000
-  });
-
-  return res.status(200).json({
-    success: true,
-    message: "login successfully",
-  });
 };
