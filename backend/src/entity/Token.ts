@@ -11,9 +11,7 @@ import { User } from "./User"
 
 @Entity("tokens")
 export class Token{
-    static findOne(arg0: { token: string | string[]; where: { id: string | string[] } }) {
-      throw new Error("Method not implemented.")
-    }
+
     @PrimaryGeneratedColumn('uuid')
     id!:string
 

@@ -9,6 +9,7 @@ import {
 } from "typeorm"
 import { User } from "./User"
 export enum status {
+    ALL="ALL",
     ACTIVE="ACTIVE",
     COMPLETED="COMPLETED"
 }

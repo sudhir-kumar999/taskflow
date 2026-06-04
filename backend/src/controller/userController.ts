@@ -6,6 +6,10 @@ import { generateTokens } from "../../utils/generateToke";
 import { Token } from "../entity/Token";
 import { sendMail } from "../../utils/sendEmail";
 import { In } from "typeorm";
+import {
+  generateAccessToken,
+  generateRefreshToken,
+} from "../../utils/generateTokens";
 interface decode {
   name: string;
   email: string;
@@ -90,8 +94,8 @@ export const registerUser = async (req: RequestWithUserRole, res: Response) => {
       createdAt: new Date(Date.now()),
       expAt: new Date(Date.now() + 20 * 60 * 1000),
     };
-    const email_link=process.env.EMAIL_LINK
-    console.log(email_link)
+    const email_link = process.env.EMAIL_LINK;
+    console.log(email_link);
     const template = `Hello, ${findId?.name} Please verify your email by
                 clicking this link :
                 <a href="${email_link}/api/users/verify-email/${findId?.id}/${tokenData.tokens}">Click here to verify </a>`;
@@ -121,8 +125,8 @@ export const registerUser = async (req: RequestWithUserRole, res: Response) => {
 };
 
 export const verifyEmail = async (req: Request, res: Response) => {
-  const token = req.params.token;
-  const reqId = req.params.id;
+  const token = req.params.token as string;
+  const reqId = req.params.id as string;
   console.log(reqId);
   console.log(token);
   if (!token) {
@@ -131,13 +135,30 @@ export const verifyEmail = async (req: Request, res: Response) => {
       message: "Your verification link are expired",
     });
   }
-  let tokenUser = await tokenRepo.findOne({
+  const testuser = await userRepo.findOne({
     where: {
-      tokens: Array.isArray(token) ? In(token) : token,
-      user_id: Array.isArray(reqId) ? In(reqId) : reqId,
+      id: reqId,
     },
   });
-  console.log(tokenUser);
+  if (!testuser) {
+    return res.status(404).json({
+      success: false,
+      message: "user not found",
+    });
+  }
+  if (testuser.isVerified) {
+    return res.status(200).json({
+      success: true,
+      message: "you are already verified login plz",
+    });
+  }
+  let tokenUser = await tokenRepo.findOne({
+    where: {
+      tokens: token,
+      user_id: reqId,
+    },
+  });
+  console.log("tokenuser", tokenUser);
   if (!tokenUser) {
     return res.status(401).json({
       success: false,
@@ -147,10 +168,10 @@ export const verifyEmail = async (req: Request, res: Response) => {
 
   let checkUser = await userRepo.findOne({
     where: {
-      id: Array.isArray(reqId) ? In(reqId) : reqId,
+      id: reqId,
     },
   });
-  // console.log(checkUser)
+  console.log("checkuser", checkUser);
   if (!checkUser) {
     return res.status(401).json({
       success: false,
@@ -161,12 +182,14 @@ export const verifyEmail = async (req: Request, res: Response) => {
   let currTime = new Date();
   let expTime = new Date(tokenUser.expAt.getTime());
   if (currTime > expTime) {
+    await tokenRepo.delete(tokenUser.id);
     return res.status(401).json({
       success: false,
       message: "token is expired generate new",
     });
   }
   if (tokenUser.is_used) {
+    await tokenRepo.delete(tokenUser.id);
     return res.status(401).json({
       success: false,
       message: "token is already used",
@@ -176,12 +199,174 @@ export const verifyEmail = async (req: Request, res: Response) => {
   await tokenRepo.save(tokenUser);
   checkUser.isVerified = true;
   await userRepo.save(checkUser);
-  let checkUsedToken = await tokenRepo.findOne({
+  // let checkUsedToken = await tokenRepo.findOne({
+  //   where: {
+  //     id: Array.isArray(reqId) ? In(reqId) : reqId,
+  //   },
+  // });
+  // if (checkUsedToken?.is_used) {
+  //   await tokenRepo.remove(checkUsedToken);
+  // }
+  await tokenRepo.delete(tokenUser.id);
+
+  return res.status(200).json({
+    success: true,
+    message: "email verified verified success",
+  });
+};
+
+export const resendLink = async (req: Request, res: Response) => {
+  const { email } = req.body;
+  console.log(email);
+  let checkUser = await userRepo.findOne({
     where: {
-      id: Array.isArray(reqId) ? In(reqId) : reqId,
+      email,
     },
   });
-  if (checkUsedToken?.is_used) {
-    await tokenRepo.remove(checkUsedToken);
+  console.log(checkUser);
+  if (!checkUser) {
+    return res.status(401).json({
+      success: false,
+      message: "you are not registered. Sign up first",
+    });
   }
+  if (checkUser.isVerified) {
+    return res.status(401).json({
+      success: false,
+      message: "you are already verified Proceed to login",
+    });
+  }
+  const userId = checkUser.id;
+  let otpData = await tokenRepo.findOne({
+    where: {
+      user_id: userId,
+    },
+  });
+  console.log("otpData", otpData);
+  if (otpData) {
+    let currTime = new Date();
+    let expTime = new Date(otpData!.expAt.getTime());
+    console.log(currTime, expTime);
+    if (!(expTime < currTime)) {
+      return res.status(401).json({
+        success: false,
+        message: "you can send reset link after 10 min",
+      });
+    }
+    await tokenRepo.delete(otpData?.id);
+  }
+
+  console.log("test");
+  const token = generateTokens();
+  const tokenData = {
+    tokens: token,
+    user_id: checkUser?.id,
+    createdAt: new Date(Date.now()),
+    expAt: new Date(Date.now() + 20 * 60 * 1000),
+  };
+  const email_link = process.env.EMAIL_LINK;
+  console.log(email_link);
+  const template = `Hello, ${checkUser?.name} Please verify your email by
+                clicking this link :
+                <a href="${email_link}/api/users/verify-email/${checkUser?.id}/${tokenData.tokens}">Click here to verify </a>`;
+
+  const mailInfo = await sendMail(email, template);
+  if (!mailInfo?.accepted[0]) {
+    return res.status(502).json({
+      success: false,
+      message: "Failed when send Email",
+    });
+  }
+  let res3 = await tokenRepo.save(tokenData);
+  console.log(res3);
+
+  return res.status(201).json({
+    success: true,
+    message: "Token send on your email verify to login",
+  });
+};
+
+export const loginUser = async (req: Request, res: Response) => {
+  let { email, password } = req.body;
+  console.log(email, password);
+  if (email == undefined || password == undefined) {
+    return res.status(401).json({
+      success: false,
+      message: "email and password is required for login",
+    });
+  }
+  email = email.trim().toLowerCase();
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({
+      success: false,
+      message: "email is not valid enter valid email",
+    });
+  }
+  let userExist = await userRepo.findOne({
+    where: {
+      email,
+    },
+  });
+  if (!userExist) {
+    return res.json({
+      success: false,
+      message: "user not register sign up first",
+    });
+  }
+
+  if (!userExist.isVerified) {
+    return res.status(401).json({
+      success: false,
+      message: "you are not verified. verify your email first",
+    });
+  }
+
+  const verifyPass = await bcrypt.compare(password, userExist.password);
+  if (!verifyPass) {
+    return res.json({
+      success: false,
+      message: "wrong password entered",
+    });
+  }
+
+  const payload = {
+    name: userExist.name,
+    email: userExist.email,
+    id: userExist.id,
+  };
+
+  const accessToken = generateAccessToken(
+    payload,
+    process.env.ACCESS_KEY as string,
+  );
+
+  const refreshPayload = {
+    id: userExist.id,
+  };
+
+  const refreshToken = generateRefreshToken(
+    refreshPayload,
+    process.env.REFRESH_KEY as string,
+  );
+
+  const production = process.env.NODE_ENv === "production";
+
+  res.cookie("accessToken", accessToken, {
+    httpOnly: true,
+    secure: production,
+    sameSite: production ? "strict" : "lax",
+    // maxAge: 1800000,
+  });
+
+  res.cookie("refreshToken", refreshToken, {
+    httpOnly: true,
+    secure: production,
+    sameSite: production ? "strict" : "lax",
+    // maxAge: 3600000
+  });
+
+  return res.status(200).json({
+    success: true,
+    message: "login successfully",
+  });
 };
