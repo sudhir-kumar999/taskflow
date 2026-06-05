@@ -53,6 +53,9 @@ export class Task{
     @CreateDateColumn()
     createdAt!: Date;
 
+    @Column({default:false})
+    isOverdue!:boolean
+
     @ManyToOne(() => User, (user) => user.tasks, {
         onDelete: 'CASCADE'
     })

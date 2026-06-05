@@ -5,7 +5,7 @@ export const sendGrid = (to: string, template: string) => {
   sgMail.setApiKey(key as string);
   const msg = {
     to: to,
-    from: "akumar07067@gmail.com", // Use the email address or domain you verified above
+    from: "akumar07067@gmail.com",
     subject: "Sending mail to verify your email",
     html: template,
   };
@@ -20,16 +20,5 @@ export const sendGrid = (to: string, template: string) => {
       }
     },
   );
-  //ES8
-  (async () => {
-    try {
-      await sgMail.send(msg);
-    } catch (error: unknown) {
-      console.error(error);
-
-      if (error instanceof Error) {
-        console.error(error);
-      }
-    }
-  })();
+  
 };

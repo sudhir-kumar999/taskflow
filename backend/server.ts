@@ -12,6 +12,7 @@ app.use(cookieParser())
 app.use("/user",router)
 app.use("/api/users",router)
 app.use("/api/resend",router)
+app.use("/api/auth",router)
 app.use("/todo",todoRoute)
 
 
