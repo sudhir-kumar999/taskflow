@@ -393,14 +393,14 @@ export const loginUser = async (req: Request, res: Response) => {
 
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
-      secure: production,
-      sameSite: production ? "none" : "lax",
+      secure: true,
+      sameSite: "none",
     });
 
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
-      secure: production,
-      sameSite: production ? "none" : "lax",
+      secure: true,
+      sameSite: "none",
     });
 
     return res.status(200).json({
