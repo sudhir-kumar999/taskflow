@@ -4,11 +4,13 @@ import router from "./src/router/userRouter";
 import dotenv from "dotenv";
 import cookieParser from 'cookie-parser';
 import todoRoute from "./src/router/todoUser";
+import cors from "cors"
 dotenv.config()
 const app=express()
+app.use(cors({ origin:`${process.env.CORS_ORIGIN}`,credentials:true}))
+
 app.use(express.json())
 app.use(cookieParser())
-
 app.use("/user",router)
 app.use("/api/users",router)
 app.use("/api/resend",router)

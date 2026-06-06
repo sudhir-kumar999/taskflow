@@ -4,7 +4,7 @@ import { checkLogin } from "../middleware/checkLogin"
 import { todo } from "node:test"
 const todoRoute=express.Router()
 
-todoRoute.get("/get-todos",checkLogin,getAllTodo)
+todoRoute.get("/get-todo",checkLogin,getAllTodo)
 todoRoute.post("/post-todo",checkLogin,postTodo)
 todoRoute.patch("/update-todo/:taskId",checkLogin,updateTodo)
 todoRoute.delete("/delete-todo/:todoId",checkLogin,deleteTodo)

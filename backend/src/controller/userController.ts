@@ -36,7 +36,7 @@ export const registerUser = async (req: RequestWithUserRole, res: Response) => {
     if (!name || !email || !password) {
       return res.status(400).json({
         success: false,
-        message: "ever field is required for register",
+        message: "every field is required for register",
       });
     }
     if (!passRegex.test(password)) {
