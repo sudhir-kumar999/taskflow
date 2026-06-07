@@ -18,11 +18,10 @@ export const checkLogin = (
 ) => {
   try {
     const userToken = req.cookies.accessToken;
-    // console.log(userToken)
     if (!userToken) {
       return res.status(401).json({
         success: false,
-        message: "no tokens found, login to get tokens",
+        message: "no tokens found",
       });
     }
     const decoded = verifyToken(

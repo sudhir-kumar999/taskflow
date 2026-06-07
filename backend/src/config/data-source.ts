@@ -8,14 +8,11 @@ import { Task } from "../entity/Tasks";
 import { User } from "../entity/User";
 import { Token } from "../entity/Token";
 
-console.log(process.env.DB_PASSWORD);
-
 export const AppDataSource = new DataSource({
   type: "postgres",
-  url:process.env.DATABASE_URL,
-  synchronize:true,
-  logging:false,
-
-  entities: [User, Task,Token],
-    migrations: [__dirname + "/../migration/*.ts"],
+  url: process.env.DATABASE_URL,
+  synchronize: true,
+  logging: false,
+  entities: [User, Task, Token],
+  migrations: [__dirname + "/../migration/*.ts"],
 });

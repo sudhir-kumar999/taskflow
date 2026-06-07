@@ -9,6 +9,7 @@ import { In } from "typeorm";
 import {
   generateAccessToken,
   generateRefreshToken,
+  verifyRefToken,
 } from "../../utils/generateTokens";
 import { sendGrid } from "../../utils/sendGrid";
 interface decode {
@@ -29,7 +30,6 @@ const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const registerUser = async (req: RequestWithUserRole, res: Response) => {
   try {
-    console.log("signup controller works");
     const bodyData = req.body;
     let { email, password, name } = bodyData;
 
@@ -97,7 +97,6 @@ export const registerUser = async (req: RequestWithUserRole, res: Response) => {
       expAt: new Date(Date.now() + 2 * 60 * 1000),
     };
     const email_link = process.env.EMAIL_LINK;
-    console.log(email_link);
     const template = `Hello, ${findId?.name} Please verify your email by
                 clicking this link :
                 <a href="${email_link}/api/users/verify-email/${findId?.id}/${tokenData.tokens}">Click here to verify </a>`;
@@ -111,7 +110,6 @@ export const registerUser = async (req: RequestWithUserRole, res: Response) => {
     // }
     const sendMail = await sendGrid(email, template);
     let res3 = await tokenRepo.save(tokenData);
-    console.log("sendgrid", sendMail);
     // if (sendMail==undefined) {
     //   return res.status(502).json({
     //     success: false,
@@ -119,7 +117,7 @@ export const registerUser = async (req: RequestWithUserRole, res: Response) => {
     //   });
     // }
 
-    return res.status(201).json({
+    return res.status(200).json({
       success: true,
       message: "Token send on your email verify to login",
     });
@@ -137,8 +135,6 @@ export const verifyEmail = async (req: Request, res: Response) => {
   try {
     const token = req.params.token as string;
     const reqId = req.params.id as string;
-    console.log(reqId);
-    console.log(token);
     if (!token) {
       return res.status(400).json({
         success: false,
@@ -168,7 +164,6 @@ export const verifyEmail = async (req: Request, res: Response) => {
         user_id: reqId,
       },
     });
-    console.log("tokenuser", tokenUser);
     if (!tokenUser) {
       return res.status(404).json({
         success: false,
@@ -181,14 +176,12 @@ export const verifyEmail = async (req: Request, res: Response) => {
         id: reqId,
       },
     });
-    console.log("checkuser", checkUser);
     if (!checkUser) {
       return res.status(404).json({
         success: false,
         message: "you are not valid user signup first",
       });
     }
-    console.log(tokenUser.is_used);
     let currTime = new Date();
     let expTime = new Date(tokenUser.expAt.getTime());
     if (currTime > expTime) {
@@ -227,7 +220,6 @@ export const verifyEmail = async (req: Request, res: Response) => {
 export const resendLink = async (req: Request, res: Response) => {
   try {
     const { email } = req.body;
-    console.log(email);
     if (!email) {
       return res.status(400).json({
         success: false,
@@ -245,15 +237,14 @@ export const resendLink = async (req: Request, res: Response) => {
         email,
       },
     });
-    console.log(checkUser);
     if (!checkUser) {
-      return res.status(401).json({
+      return res.status(400).json({
         success: false,
         message: "you are not registered. Sign up first",
       });
     }
     if (checkUser.isVerified) {
-      return res.status(401).json({
+      return res.status(400).json({
         success: false,
         message: "you are already verified Proceed to login",
       });
@@ -264,13 +255,11 @@ export const resendLink = async (req: Request, res: Response) => {
         user_id: userId,
       },
     });
-    console.log("otpData", otpData);
     if (otpData) {
       let currTime = new Date();
       let expTime = new Date(otpData!.expAt.getTime());
-      console.log(currTime, expTime);
       if (!(expTime < currTime)) {
-        return res.status(401).json({
+        return res.status(400).json({
           success: false,
           message: "you can send reset link after 10 min",
         });
@@ -278,7 +267,6 @@ export const resendLink = async (req: Request, res: Response) => {
       await tokenRepo.delete(otpData?.id);
     }
 
-    console.log("test");
     const token = generateTokens();
     const tokenData = {
       tokens: token,
@@ -287,7 +275,6 @@ export const resendLink = async (req: Request, res: Response) => {
       expAt: new Date(Date.now() + 20 * 60 * 1000),
     };
     // const email_link = process.env.EMAIL_LINK;
-    // console.log(email_link);
     // const template = `Hello, ${checkUser?.name} Please verify your email by
     //                   clicking this link :
     //                   <a href="${email_link}/api/users/verify-email/${checkUser?.id}/${tokenData.tokens}">Click here to verify </a>`;
@@ -300,17 +287,13 @@ export const resendLink = async (req: Request, res: Response) => {
     //   });
     // }
     const email_link = process.env.EMAIL_LINK;
-    console.log(email_link);
     const template = `Hello, ${checkUser?.name} Please verify your email by
                 clicking this link :
                 <a href="${email_link}/api/users/verify-email/${checkUser?.id}/${tokenData.tokens}">Click here to verify </a>`;
 
     const sendMail = await sendGrid(email, template);
-    console.log("sendgrid", sendMail);
     let res3 = await tokenRepo.save(tokenData);
-    console.log(res3);
-
-    return res.status(201).json({
+    return res.status(200).json({
       success: true,
       message: "Token send on your email verify to login",
     });
@@ -327,7 +310,6 @@ export const resendLink = async (req: Request, res: Response) => {
 export const loginUser = async (req: Request, res: Response) => {
   try {
     let { email, password } = req.body;
-    console.log(email, password);
     if (!email || !password) {
       return res.status(401).json({
         success: false,
@@ -348,7 +330,7 @@ export const loginUser = async (req: Request, res: Response) => {
       },
     });
     if (!userExist) {
-      return res.json({
+      return res.status(404).json({
         success: false,
         message: "user not register sign up first",
       });
@@ -363,7 +345,7 @@ export const loginUser = async (req: Request, res: Response) => {
 
     const verifyPass = await bcrypt.compare(password, userExist.password);
     if (!verifyPass) {
-      return res.json({
+      return res.status(401).json({
         success: false,
         message: "wrong password entered",
       });
@@ -407,9 +389,9 @@ export const loginUser = async (req: Request, res: Response) => {
       success: true,
       message: "login successfully",
       data: {
-        id:userExist.id,
-        email:userExist.email,
-        name:userExist.name
+        id: userExist.id,
+        email: userExist.email,
+        name: userExist.name,
       },
     });
   } catch (error: unknown) {
@@ -432,8 +414,8 @@ export const logoutUser = (req: Request, res: Response) => {
 
     res.clearCookie("refreshToken", {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
+      secure: true,
+      sameSite: "none",
     });
 
     return res.status(200).json({
@@ -450,38 +432,99 @@ export const logoutUser = (req: Request, res: Response) => {
   }
 };
 
-
-export const getMe=async(req:RequestWithUserRole,res:Response)=>{
-try {
-  const {id}=req.user as decode
-  if(!id){
-    return res.status(401).json({
-      success:false,
-      message:"Not logged in"
-    })
-  }
-  let user=await userRepo.findOne({
-    where:{
-      id:id
+export const getMe = async (req: RequestWithUserRole, res: Response) => {
+  try {
+    const { id } = req.user as decode;
+    if (!id) {
+      return res.status(401).json({
+        success: false,
+        message: "Not logged in",
+      });
     }
-  })
-  if(!user){
-    return res.status(401).json({
-      success:false,
-      message:"Not logged in"
-    })
-  }
-
-  return res.status(200).json({
-    success:true,
-    message:"user fetched",
-    data:{
-      id:user.id,
-      name:user.name,
-      email:user.email
+    let user = await userRepo.findOne({
+      where: {
+        id: id,
+      },
+    });
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "Not logged in",
+      });
     }
-  })
-} catch (error) {
-  
-}
-}
+
+    return res.status(200).json({
+      success: true,
+      message: "user fetched",
+      data: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+      },
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      res.status(500).json({
+        success: false,
+        message: error.message || "internal server error",
+      });
+    }
+  }
+};
+
+export const newToken = async (req: RequestWithUserRole, res: Response) => {
+  try {
+    console.log("token after expire");
+    const refToken = req.cookies.refreshToken;
+    if (!refToken) {
+      return res.status(404).json({
+        success: false,
+        message: "no refresh token found",
+      });
+    }
+    const verify = await verifyRefToken(refToken, process.env.REFRESH_KEY!);
+    if (!verify) {
+      return res.status(404).json({
+        success: false,
+        message: "wrong or expired token provided",
+      });
+    }
+    const { id } = verify as decode;
+    const userExist = await userRepo.findOne({
+      where: {
+        id: id as string,
+      },
+    });
+    if (!userExist) {
+      return res.status(404).json({
+        success: false,
+        message: "No user found thorugh refresh token",
+      });
+    }
+    const payload = {
+      name: userExist.name,
+      email: userExist.email,
+      id: userExist.id,
+    };
+    const accessToken = generateAccessToken(
+      payload,
+      process.env.ACCESS_KEY as string,
+    );
+    res.cookie("accessToken", accessToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+    });
+    return res.status(200).json({
+      success: true,
+      message: "new token set success",
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      res.status(500).json({
+        success: false,
+        message: error.message || "internal server error",
+      });
+    }
+  }
+};

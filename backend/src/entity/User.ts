@@ -36,6 +36,4 @@ export class User {
 
   @OneToMany(() => Token, (toke) => toke.tokens)
   tokens!: Token[];
-
-
 }
