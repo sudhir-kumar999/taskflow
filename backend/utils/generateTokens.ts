@@ -11,7 +11,7 @@ interface payload2 extends JwtPayload {
 }
 export const generateAccessToken = (payload: payload, secret: string) => {
   return jwt.sign(payload, secret, {
-    expiresIn: "1m",
+    expiresIn: "30m",
   });
 };
 

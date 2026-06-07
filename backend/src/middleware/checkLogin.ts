@@ -22,14 +22,13 @@ export const checkLogin = (
     if (!userToken) {
       return res.status(401).json({
         success: false,
-        message: "no tokens found. login to get tokens",
+        message: "no tokens found, login to get tokens",
       });
     }
     const decoded = verifyToken(
       userToken,
       process.env.ACCESS_KEY as string,
     ) as decode;
-    // console.log(decoded)
     if (!decoded) {
       return res.status(401).json({
         success: false,

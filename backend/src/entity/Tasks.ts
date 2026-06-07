@@ -30,6 +30,9 @@ export class Task{
     @Column({nullable:true})
     description!:string
 
+    @Column({default:false})
+    isPinned!:boolean
+
      @Column({
         type: "enum",
         enum: priority,

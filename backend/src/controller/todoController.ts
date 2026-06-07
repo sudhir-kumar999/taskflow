@@ -46,6 +46,10 @@ export const getAllTodo = async (req: RequestWithUserRole, res: Response) => {
     where: {
       user_id: id,
     },
+    order:{
+        isPinned:"DESC",
+        createdAt:"DESC"
+    }
   });
   if (data.length==0) {
     return res.status(404).json({
@@ -459,4 +463,48 @@ export const filterPriority=async(req:RequestWithUserRole,res:Response)=>{
       });
     }
    }
+}
+
+export const pinMessage=async(req:RequestWithUserRole,res:Response)=>{
+    try {
+        console.log("first")
+        const {id}=req.user as decode
+        const userId=id
+        console.log(id)
+        const todoId=req.params.todoId as string
+        console.log(todoId)
+        if(!id){
+        return res.status(403).json({
+            success:false,
+            message:"no id found login plz"
+        })
+    }
+        const todo=await taskRepo.findOne({
+            where:{
+                id:todoId as string,
+                user_id:userId
+            }
+        })
+        // console.log("todo",todo)
+        if(!todo){
+            return res.status(404).json({
+                success:false,
+                message:"no to found"
+            })
+        }
+        todo.isPinned=!todo.isPinned
+        await taskRepo.save(todo)
+        return res.status(200).json({
+                success:true,
+                message:"toggle pin message",
+                // data:todo
+            })
+    } catch (error) {
+        if (error instanceof Error) {
+      res.status(500).json({
+        success: false,
+        message: error.message || "internal server error",
+      });
+    }
+    }
 }
