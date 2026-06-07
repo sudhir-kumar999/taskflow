@@ -393,7 +393,11 @@ export const filterTodo=async(req:RequestWithUserRole,res:Response)=>{
         where:{
             user_id:id,
             status:filter as status
-        }
+        },
+         order:{
+        isPinned:"DESC",
+        createdAt:"DESC"
+    }
     })
     console.log(todos)
     if(todos.length==0){
@@ -440,7 +444,11 @@ export const filterPriority=async(req:RequestWithUserRole,res:Response)=>{
         where:{
             user_id:id,
             priority:filter as priority
-        }
+        },
+         order:{
+        isPinned:"DESC",
+        createdAt:"DESC"
+    }
     })
     console.log(todos)
     if(todos.length==0){
