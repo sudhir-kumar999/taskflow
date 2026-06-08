@@ -474,7 +474,6 @@ export const getMe = async (req: RequestWithUserRole, res: Response) => {
 
 export const newToken = async (req: RequestWithUserRole, res: Response) => {
   try {
-    console.log("token after expire");
     const refToken = req.cookies.refreshToken;
     if (!refToken) {
       return res.status(404).json({
