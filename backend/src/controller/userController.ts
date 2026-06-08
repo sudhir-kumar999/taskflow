@@ -4,14 +4,13 @@ import { User } from "../entity/User";
 import bcrypt from "bcrypt";
 import { generateTokens } from "../../utils/generateToke";
 import { Token } from "../entity/Token";
-import { sendMail } from "../../utils/sendEmail";
-import { In } from "typeorm";
 import {
   generateAccessToken,
   generateRefreshToken,
   verifyRefToken,
 } from "../../utils/generateTokens";
 import { sendGrid } from "../../utils/sendGrid";
+import path from "node:path";
 interface decode {
   name: string;
   email: string;
@@ -153,10 +152,7 @@ export const verifyEmail = async (req: Request, res: Response) => {
       });
     }
     if (testuser.isVerified) {
-      return res.status(200).json({
-        success: true,
-        message: "you are already verified login plz",
-      });
+      return res.sendFile(path.join(process.cwd(),"index2.html"))
     }
     let tokenUser = await tokenRepo.findOne({
       where: {
@@ -203,10 +199,7 @@ export const verifyEmail = async (req: Request, res: Response) => {
     checkUser.isVerified = true;
     await userRepo.save(checkUser);
     await tokenRepo.delete(tokenUser.id);
-    return res.status(200).json({
-      success: true,
-      message: "email verified verified success",
-    });
+    return res.sendFile(path.join(process.cwd(),"index.html"))
   } catch (error) {
     if (error instanceof Error) {
       res.status(500).json({
@@ -290,7 +283,6 @@ export const resendLink = async (req: Request, res: Response) => {
     const template = `Hello, ${checkUser?.name} Please verify your email by
                 clicking this link :
                 <a href="${email_link}/api/users/verify-email/${checkUser?.id}/${tokenData.tokens}">Click here to verify </a>`;
-
     const sendMail = await sendGrid(email, template);
     let res3 = await tokenRepo.save(tokenData);
     return res.status(200).json({
@@ -335,14 +327,12 @@ export const loginUser = async (req: Request, res: Response) => {
         message: "user not register sign up first",
       });
     }
-
     if (!userExist.isVerified) {
       return res.status(401).json({
         success: false,
         message: "you are not verified. verify your email first",
       });
     }
-
     const verifyPass = await bcrypt.compare(password, userExist.password);
     if (!verifyPass) {
       return res.status(401).json({
@@ -350,41 +340,34 @@ export const loginUser = async (req: Request, res: Response) => {
         message: "wrong password entered",
       });
     }
-
     const payload = {
       name: userExist.name,
       email: userExist.email,
       id: userExist.id,
     };
-
     const accessToken = generateAccessToken(
       payload,
       process.env.ACCESS_KEY as string,
     );
-
     const refreshPayload = {
       id: userExist.id,
     };
-
     const refreshToken = generateRefreshToken(
       refreshPayload,
       process.env.REFRESH_KEY as string,
     );
-
-    const production = process.env.NODE_ENv === "production";
-
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
       secure: true,
       sameSite: "none",
+      path: "/",
     });
-
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: true,
       sameSite: "none",
+      path: "/api/auth/new-token",
     });
-
     return res.status(200).json({
       success: true,
       message: "login successfully",

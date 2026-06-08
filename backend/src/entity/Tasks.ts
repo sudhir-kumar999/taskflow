@@ -59,6 +59,9 @@ export class Task {
   @Column({ default: false })
   isOverdue!: boolean;
 
+  @Column({ default: false })
+  isDelete!: boolean;
+
   @ManyToOne(() => User, (user) => user.tasks, {
     onDelete: "CASCADE",
   })

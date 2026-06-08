@@ -44,6 +44,7 @@ export const getAllTodo = async (req: RequestWithUserRole, res: Response) => {
     const data = await taskRepo.find({
       where: {
         user_id: id,
+        isDelete: false,
       },
       order: {
         isPinned: "DESC",
@@ -51,8 +52,8 @@ export const getAllTodo = async (req: RequestWithUserRole, res: Response) => {
       },
     });
     if (data.length == 0) {
-      return res.status(404).json({
-        success: false,
+      return res.status(200).json({
+        success: true,
         message: "no data found",
       });
     }
@@ -314,8 +315,8 @@ export const deleteTodo = async (req: RequestWithUserRole, res: Response) => {
       },
     });
     if (!todos) {
-      return res.status(404).json({
-        success: false,
+      return res.status(200).json({
+        success: true,
         message: "No todo found to delete",
       });
     }
@@ -326,8 +327,8 @@ export const deleteTodo = async (req: RequestWithUserRole, res: Response) => {
         message: "you are not allowed to delete",
       });
     }
-
-    await taskRepo.delete(todo_id);
+    todos.isDelete = true;
+    await taskRepo.save(todos);
     return res.status(200).json({
       success: true,
       message: "todo deleted successfully",
@@ -384,8 +385,8 @@ export const filterTodo = async (req: RequestWithUserRole, res: Response) => {
       },
     });
     if (todos.length == 0) {
-      return res.status(404).json({
-        success: false,
+      return res.status(200).json({
+        success: true,
         message: "No tasks find",
       });
     }
@@ -438,8 +439,8 @@ export const filterPriority = async (
       },
     });
     if (todos.length == 0) {
-      return res.status(404).json({
-        success: false,
+      return res.status(200).json({
+        success: true,
         message: "No tasks find",
       });
     }
