@@ -1,13 +1,10 @@
-import express, { Response } from "express";
-import { AppDataSource } from "../config/data-source";
-import { User } from "../entity/User";
+import express from "express";
 import {
   getMe,
   loginUser,
   logoutUser,
   newToken,
   registerUser,
-  RequestWithUserRole,
   resendLink,
   verifyEmail,
 } from "../controller/userController";
@@ -20,6 +17,6 @@ router.post("/link", resendLink);
 router.post("/login", loginUser);
 router.get("/logout", logoutUser);
 router.get("/me", checkLogin, getMe);
-router.post("/new-token",newToken)
+router.post("/new-token",newToken);
 
 export default router;

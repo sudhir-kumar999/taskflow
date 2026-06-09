@@ -9,7 +9,6 @@ import {
   updateTodo,
 } from "../controller/todoController";
 import { checkLogin } from "../middleware/checkLogin";
-import { todo } from "node:test";
 const todoRoute = express.Router();
 
 todoRoute.get("/get-todo", checkLogin, getAllTodo);

@@ -2,7 +2,6 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  OneToOne,
   JoinColumn,
   CreateDateColumn,
   ManyToOne,
@@ -22,52 +21,52 @@ export enum priority {
 @Entity("tasks")
 export class Task {
   @PrimaryGeneratedColumn("uuid")
-  id!: string;
+    id!: string;
 
   @Column()
-  title!: string;
+    title!: string;
 
   @Column({ nullable: true })
-  description!: string;
+    description!: string;
 
   @Column({ default: false })
-  isPinned!: boolean;
+    isPinned!: boolean;
 
   @Column({
     type: "enum",
     enum: priority,
     default: priority.MEDIUM,
   })
-  priority!: priority;
+    priority!: priority;
 
   @Column({
     type: "enum",
     enum: status,
     default: status.ACTIVE,
   })
-  status!: status;
+    status!: status;
 
   @Column({
     type: "timestamp",
     nullable: true,
   })
-  dueDate!: Date;
+    dueDate!: Date;
 
   @CreateDateColumn()
-  createdAt!: Date;
+    createdAt!: Date;
 
   @Column({ default: false })
-  isOverdue!: boolean;
+    isOverdue!: boolean;
 
   @Column({ default: false })
-  isDelete!: boolean;
+    isDelete!: boolean;
 
   @ManyToOne(() => User, (user) => user.tasks, {
     onDelete: "CASCADE",
   })
   @JoinColumn({ name: "user_id" })
-  user!: User;
+    user!: User;
 
   @Column()
-  user_id!: string;
+    user_id!: string;
 }

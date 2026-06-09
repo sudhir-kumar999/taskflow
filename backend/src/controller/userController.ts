@@ -30,7 +30,8 @@ const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export const registerUser = async (req: RequestWithUserRole, res: Response) => {
   try {
     const bodyData = req.body;
-    let { email, password, name } = bodyData;
+    let { email,name } = bodyData;
+    const { password}=bodyData;
 
     if (!name || !email || !password) {
       return res.status(400).json({
@@ -81,8 +82,8 @@ export const registerUser = async (req: RequestWithUserRole, res: Response) => {
         message: "user already exists",
       });
     }
-    let res2 = await userRepo.save(bodyData);
-    let findId = await userRepo.findOne({
+    await userRepo.save(bodyData);
+    const findId = await userRepo.findOne({
       where: {
         email,
       },
@@ -107,8 +108,8 @@ export const registerUser = async (req: RequestWithUserRole, res: Response) => {
     //     message: "Failed when send Email",
     //   });
     // }
-    const sendMail = await sendGrid(email, template);
-    let res3 = await tokenRepo.save(tokenData);
+    await sendGrid(email, template);
+    await tokenRepo.save(tokenData);
     // if (sendMail==undefined) {
     //   return res.status(502).json({
     //     success: false,
@@ -152,9 +153,9 @@ export const verifyEmail = async (req: Request, res: Response) => {
       });
     }
     if (testuser.isVerified) {
-      return res.sendFile(path.join(process.cwd(),"index2.html"))
+      return res.sendFile(path.join(process.cwd(), "index2.html"));
     }
-    let tokenUser = await tokenRepo.findOne({
+    const tokenUser = await tokenRepo.findOne({
       where: {
         tokens: token,
         user_id: reqId,
@@ -167,7 +168,7 @@ export const verifyEmail = async (req: Request, res: Response) => {
       });
     }
 
-    let checkUser = await userRepo.findOne({
+    const checkUser = await userRepo.findOne({
       where: {
         id: reqId,
       },
@@ -178,8 +179,8 @@ export const verifyEmail = async (req: Request, res: Response) => {
         message: "you are not valid user signup first",
       });
     }
-    let currTime = new Date();
-    let expTime = new Date(tokenUser.expAt.getTime());
+    const currTime = new Date();
+    const expTime = new Date(tokenUser.expAt.getTime());
     if (currTime > expTime) {
       await tokenRepo.delete(tokenUser.id);
       return res.status(401).json({
@@ -199,7 +200,7 @@ export const verifyEmail = async (req: Request, res: Response) => {
     checkUser.isVerified = true;
     await userRepo.save(checkUser);
     await tokenRepo.delete(tokenUser.id);
-    return res.sendFile(path.join(process.cwd(),"index.html"))
+    return res.sendFile(path.join(process.cwd(), "index.html"));
   } catch (error) {
     if (error instanceof Error) {
       res.status(500).json({
@@ -225,7 +226,7 @@ export const resendLink = async (req: Request, res: Response) => {
         message: "provide valid email",
       });
     }
-    let checkUser = await userRepo.findOne({
+    const checkUser = await userRepo.findOne({
       where: {
         email,
       },
@@ -243,14 +244,14 @@ export const resendLink = async (req: Request, res: Response) => {
       });
     }
     const userId = checkUser.id;
-    let otpData = await tokenRepo.findOne({
+    const otpData = await tokenRepo.findOne({
       where: {
         user_id: userId,
       },
     });
     if (otpData) {
-      let currTime = new Date();
-      let expTime = new Date(otpData!.expAt.getTime());
+      const currTime = new Date();
+      const expTime = new Date(otpData!.expAt.getTime());
       if (!(expTime < currTime)) {
         return res.status(400).json({
           success: false,
@@ -283,8 +284,8 @@ export const resendLink = async (req: Request, res: Response) => {
     const template = `Hello, ${checkUser?.name} Please verify your email by
                 clicking this link :
                 <a href="${email_link}/api/users/verify-email/${checkUser?.id}/${tokenData.tokens}">Click here to verify </a>`;
-    const sendMail = await sendGrid(email, template);
-    let res3 = await tokenRepo.save(tokenData);
+    await sendGrid(email, template);
+    await tokenRepo.save(tokenData);
     return res.status(200).json({
       success: true,
       message: "Token send on your email verify to login",
@@ -316,7 +317,7 @@ export const loginUser = async (req: Request, res: Response) => {
       });
     }
     password = password.trim();
-    let userExist = await userRepo.findOne({
+    const userExist = await userRepo.findOne({
       where: {
         email,
       },
@@ -424,7 +425,7 @@ export const getMe = async (req: RequestWithUserRole, res: Response) => {
         message: "Not logged in",
       });
     }
-    let user = await userRepo.findOne({
+    const user = await userRepo.findOne({
       where: {
         id: id,
       },
@@ -496,6 +497,7 @@ export const newToken = async (req: RequestWithUserRole, res: Response) => {
       httpOnly: true,
       secure: true,
       sameSite: "none",
+      path: "/",
     });
     return res.status(200).json({
       success: true,

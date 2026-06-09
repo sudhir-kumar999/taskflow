@@ -12,28 +12,28 @@ import { Token } from "./Token";
 @Entity("users")
 export class User {
   @PrimaryGeneratedColumn("uuid")
-  id!: string;
+    id!: string;
 
   @Column()
-  name!: string;
+    name!: string;
 
   @Column({
     unique: true,
   })
-  email!: string;
+    email!: string;
 
   @Column()
-  password!: string;
+    password!: string;
 
   @CreateDateColumn()
-  createdAt!: Date;
+    createdAt!: Date;
 
   @Column({ default: false })
-  isVerified!: boolean;
+    isVerified!: boolean;
 
   @OneToMany(() => Task, (task) => task.user)
-  tasks!: Task[];
+    tasks!: Task[];
 
   @OneToMany(() => Token, (toke) => toke.tokens)
-  tokens!: Token[];
+    tokens!: Token[];
 }

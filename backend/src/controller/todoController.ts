@@ -16,12 +16,6 @@ interface decode {
 interface RequestWithUserRole extends Request {
   user?: decode;
 }
-interface bodyData {
-  title: string;
-  description: string;
-  priority: "LOW" | "MEDIUM" | "HIGH";
-  dueDate: string;
-}
 
 interface updateData {
   title?: string;
@@ -57,13 +51,14 @@ export const getAllTodo = async (req: RequestWithUserRole, res: Response) => {
         message: "no data found",
       });
     }
-    let currDate = new Date();
+    const currDate = new Date();
     data.forEach(async (todo) => {
       if (
         (todo.dueDate && new Date(todo.dueDate)) < currDate &&
         !todo.isOverdue
       ) {
-        ((todo.isOverdue = true), await taskRepo.save(todo));
+        todo.isOverdue = true;
+        await taskRepo.save(todo);
       }
     });
     return res.status(200).json({
@@ -84,7 +79,8 @@ export const getAllTodo = async (req: RequestWithUserRole, res: Response) => {
 export const postTodo = async (req: RequestWithUserRole, res: Response) => {
   try {
     const data = req.body;
-    let { title, description, priority, dueDate } = data;
+    let { title,  priority, dueDate } = data;
+    const {description}=data;
     const { id } = req.user as decode;
     if (!id) {
       return res.status(401).json({
@@ -101,7 +97,7 @@ export const postTodo = async (req: RequestWithUserRole, res: Response) => {
     }
     title = title.trim();
 
-    if (title.trim().length <= 5) {
+    if (title.trim().length < 5) {
       return res.status(400).json({
         success: false,
         message: "title must be of at least 5 letter",
@@ -153,7 +149,7 @@ export const postTodo = async (req: RequestWithUserRole, res: Response) => {
       priority,
       dueDate,
     };
-    let result = await taskRepo.save(taskData);
+    await taskRepo.save(taskData);
     return res.status(201).json({
       success: true,
       message: "todo created successfully",
@@ -171,7 +167,8 @@ export const postTodo = async (req: RequestWithUserRole, res: Response) => {
 export const updateTodo = async (req: RequestWithUserRole, res: Response) => {
   try {
     const bodyData: updateData = req.body;
-    let { title, description, status, priority, dueDate } = bodyData;
+    let { title, description , dueDate } = bodyData;
+    const { status,priority}=bodyData;
     const id = req.params.taskId;
     const userId = req.user?.id;
     if (!userId) {
@@ -208,7 +205,7 @@ export const updateTodo = async (req: RequestWithUserRole, res: Response) => {
         message: "you are not permission to update",
       });
     }
-    let updatedTask: Partial<Task> = {};
+    const updatedTask: Partial<Task> = {};
     if (typeof title != "string") {
       return res.status(400).json({
         success: false,
@@ -276,8 +273,8 @@ export const updateTodo = async (req: RequestWithUserRole, res: Response) => {
       dueDate = parseDate;
       updatedTask.dueDate = dueDate;
     }
-    let finalTask = taskRepo.merge(task, updatedTask);
-    let result = await taskRepo.save(finalTask);
+    const finalTask = taskRepo.merge(task, updatedTask);
+    const result = await taskRepo.save(finalTask);
     return res.status(200).json({
       success: true,
       message: "data updated success",
@@ -377,6 +374,7 @@ export const filterTodo = async (req: RequestWithUserRole, res: Response) => {
     const todos = await taskRepo.find({
       where: {
         user_id: id,
+        isDelete: false,
         status: filter as status,
       },
       order: {
@@ -431,6 +429,7 @@ export const filterPriority = async (
     const todos = await taskRepo.find({
       where: {
         user_id: id,
+        isDelete: false,
         priority: filter as priority,
       },
       order: {
